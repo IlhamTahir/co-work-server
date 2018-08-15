@@ -1,0 +1,27 @@
+# 将此文件重命名为 `.gitlag-ci.yml`，即可启用 Gilab CI。
+
+variables:
+  MYSQL_DATABASE: my_api_db_testing
+  MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+
+before_script:
+  - composer config -g repo.packagist composer https://packagist.phpcomposer.com
+  - composer install
+  - cp env.php.example env.testing.php
+  - IN_TESTING=true bin/biz env:write env.testing.php DB_NAME my_api_db_testing
+  - IN_TESTING=true bin/biz env:write env.testing.php DB_HOST mysql
+
+cache:
+  key: "$CI_COMMIT_REF_NAME"
+  paths:
+    - vendor
+
+Testing:
+  stage: test
+  tags:
+    - docker-ci-php-7.1
+  services:
+    - mysql:5.5
+  script:
+    - IN_TESTING=true php -S localhost:8001 -t public .htrouter.php &>/dev/null&
+    - bin/codecept run -vvv
